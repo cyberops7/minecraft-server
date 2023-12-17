@@ -22,12 +22,12 @@ fi
 echo "Port used: $Port"
 
 if [ -z "$BedrockPort" ]; then
-    Port="19132"
+    BedrockPort="19132"
 fi
 echo "Bedrock port used: $BedrockPort"
 
 # Change directory to server directory
-cd /minecraft
+cd /minecraft || exit
 
 # Create backups/downloads folder if it doesn't exist
 if [ ! -d "/minecraft/downloads" ]; then
@@ -68,7 +68,7 @@ done
 # Take ownership of server files and set correct permissions
 if [ -z "$NoPermCheck" ]; then
     echo "Taking ownership of all server files/folders in /minecraft..."
-    sudo -n chown -R $(whoami) /minecraft >/dev/null 2>&1
+    sudo -n chown -R "$(whoami)" /minecraft >/dev/null 2>&1
     echo "Complete"
 else
     echo "Skipping permissions check due to NoPermCheck flag"

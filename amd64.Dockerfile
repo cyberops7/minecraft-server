@@ -14,7 +14,7 @@ FROM --platform=linux/amd64 ubuntu:rolling
 # Fetch dependencies
 RUN apt update && DEBIAN_FRONTEND=noninteractive apt-get install openjdk-19-jre-headless systemd-sysv tzdata sudo curl unzip net-tools gawk openssl findutils pigz libcurl4 libc6 libcrypt1 apt-utils libcurl4-openssl-dev ca-certificates binfmt-support nano -yqq && rm -rf /var/cache/apt/*
 
-# Set port environment variable
+# Set Java port environment variable
 ENV Port=25565
 
 # Set Bedrock port environment variable
@@ -43,11 +43,6 @@ ENV QuietCurl=""
 
 # Optional switch to disable ViaVersion
 ENV NoViaVersion=""
-
-# IPV4 Ports
-EXPOSE 25565/tcp
-EXPOSE 19132/tcp
-EXPOSE 19132/udp
 
 # Copy scripts to minecraftbe folder and make them executable
 RUN mkdir /scripts
