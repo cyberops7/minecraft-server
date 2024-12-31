@@ -2,3 +2,5 @@
 .idea/*
 build.sh
 publish.sh
+scan.sh
+Makefile
