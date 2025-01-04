@@ -2,6 +2,14 @@
 # Author: James A. Chambers - https://jamesachambers.com/minecraft-java-bedrock-server-together-geyser-floodgate/
 # GitHub Repository: https://github.com/TheRemote/Legendary-Java-Minecraft-Geyser-Floodgate
 
+# Use Ubuntu rolling version for builder
+FROM ubuntu:rolling AS builder
+
+# Prep qemu files
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -yqq apt-utils binfmt-support qemu-user-static && \
+    rm -rf /var/cache/apt/*
+
 # Use Ubuntu rolling version
 FROM --platform=linux/amd64 ubuntu:rolling
 
