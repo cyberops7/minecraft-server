@@ -158,35 +158,48 @@ if [ ! -e "/minecraft/plugins/Geyser-Spigot/config.yml" ]; then
 fi
 
 # Update paperclip.jar
-echo "Updating to most recent Paper server version ..."
+echo "Updating the Paper server version ..."
 
 # Test update website connectivity first
 if ! curl "${CurlArgs[@]}" \
           -s \
-          https://api.papermc.io \
+          https://fill.papermc.io \
           -o /dev/null; then
     echo "ERROR:  Unable to connect to update website (internet connection may be down).  Skipping server and plugin updates."
 else
-    # Get latest build number (or use pinned build if specified)
+    # Use pinned build if specified, else get the latest build
     if [ -n "$PaperBuild" ]; then
         echo "     Using pinned Paper build $PaperBuild for version $Version"
-        Build=$((PaperBuild + 0))
-    else
         BuildJSON=$(curl --no-progress-meter \
             "${CurlArgs[@]}" \
-            https://api.papermc.io/v2/projects/paper/versions/"${Version:?}"/builds
+            https://fill.papermc.io/v3/projects/paper/versions/"${Version:?}"/builds
         )
-        Build=$(echo "$BuildJSON" | jq '.builds | if map(select(.channel == "default")) | length > 0 then map(select(.channel == "default") | .build) | . else map(select(.channel == "experimental") | .build) | . end | .[-1]')
-        Build=$((Build + 0))
+        BuildInfo=$(echo "$BuildJSON" | jq --argjson build "$PaperBuild" 'map(select(.id == $build)) | .[0]')
+        if [ "$BuildInfo" = "null" ] || [ -z "$BuildInfo" ]; then
+            echo "     ERROR: Build $PaperBuild not found for version $Version"
+            Build=0
+            DownloadURL=""
+        else
+            Build=$(echo "$BuildInfo" | jq -r '.id')
+            DownloadURL=$(echo "$BuildInfo" | jq -r '.downloads["server:default"].url')
+        fi
+    else
+        echo "     Using the latest build for version $Version"
+        BuildJSON=$(curl --no-progress-meter \
+            "${CurlArgs[@]}" \
+            https://fill.papermc.io/v3/projects/paper/versions/"${Version:?}"/builds/latest
+        )
+        Build=$(echo "$BuildJSON" | jq -r '.id')
+        DownloadURL=$(echo "$BuildJSON" | jq -r '.downloads["server:default"].url')
         echo "     Found latest Paper build $Build for version $Version"
     fi
 
     # Download build for the targeted version
-    if [[ $Build != 0 ]]; then
+    if [[ $Build != 0 ]] && [ -n "$DownloadURL" ] && [ "$DownloadURL" != "null" ]; then
         curl ${QuietCurl:+"--no-progress-meter"} \
              "${CurlArgs[@]}" \
              -o /minecraft/paperclip.jar \
-             "https://api.papermc.io/v2/projects/paper/versions/$Version/builds/$Build/downloads/paper-$Version-$Build.jar"
+             "$DownloadURL"
     else
         echo "     Unable to retrieve Paper build (got result of: $Build)"
     fi
