@@ -167,23 +167,28 @@ if ! curl "${CurlArgs[@]}" \
           -o /dev/null; then
     echo "ERROR:  Unable to connect to update website (internet connection may be down).  Skipping server and plugin updates."
 else
-    # Get latest build number
-    BuildJSON=$(curl --no-progress-meter \
-        "${CurlArgs[@]}" \
-        https://api.papermc.io/v2/projects/paper/versions/"${Version:?}"/builds
-    )
-    Build=$(echo "$BuildJSON" | jq '.builds | if map(select(.channel == "default")) | length > 0 then map(select(.channel == "default") | .build) | . else map(select(.channel == "experimental") | .build) | . end | .[-1]')
-    Build=$((Build + 0))
-
-    # Download latest build for the targeted version
-    if [[ $Build != 0 ]]; then
+    # Get latest build number (or use pinned build if specified)
+    if [ -n "$PaperBuild" ]; then
+        echo "     Using pinned Paper build $PaperBuild for version $Version"
+        Build=$((PaperBuild + 0))
+    else
+        BuildJSON=$(curl --no-progress-meter \
+            "${CurlArgs[@]}" \
+            https://api.papermc.io/v2/projects/paper/versions/"${Version:?}"/builds
+        )
+        Build=$(echo "$BuildJSON" | jq '.builds | if map(select(.channel == "default")) | length > 0 then map(select(.channel == "default") | .build) | . else map(select(.channel == "experimental") | .build) | . end | .[-1]')
+        Build=$((Build + 0))
         echo "     Found latest Paper build $Build for version $Version"
+    fi
+
+    # Download build for the targeted version
+    if [[ $Build != 0 ]]; then
         curl ${QuietCurl:+"--no-progress-meter"} \
              "${CurlArgs[@]}" \
              -o /minecraft/paperclip.jar \
              "https://api.papermc.io/v2/projects/paper/versions/$Version/builds/$Build/downloads/paper-$Version-$Build.jar"
     else
-        echo "     Unable to retrieve latest Paper build (got result of: $Build)"
+        echo "     Unable to retrieve Paper build (got result of: $Build)"
     fi
 
     # Update Floodgate
@@ -202,35 +207,51 @@ else
 
     echo "Updating ViaVersion ..."
     if [ -z "$NoViaVersion" ]; then
-        # Update ViaVersion if new version is available
         echo "     Checking the latest version of ViaVersion ..."
-        ViaVersionLatestVersion=$(curl --no-progress-meter \
-            "${CurlArgs[@]}" \
-            -k \
-            https://ci.viaversion.com/job/ViaVersion/lastBuild/artifact/build/libs/ \
-            | grep -P '(?<=href=")ViaVersion[^"]+' -o --max-count=1 | head -n1
-        )
-        if [ -n "$ViaVersionLatestVersion" ]; then
-            ViaVersionLatestMD5=$(curl --no-progress-meter \
+            ViaVersionLatestVersion=$(curl --no-progress-meter \
                 "${CurlArgs[@]}" \
                 -k \
-                "https://ci.viaversion.com/job/ViaVersion/lastBuild/artifact/build/libs/$ViaVersionLatestVersion/*fingerprint*/" \
-                | grep breadcrumbs | cut -d'_' -f24- | cut -d'<' -f2 | cut -d'>' -f2
+                https://ci.viaversion.com/job/ViaVersion/lastBuild/artifact/build/libs/ \
+                | grep -P '(?<=href=")ViaVersion[^"]+' -o --max-count=1 | head -n1
             )
-            if [ -n "$ViaVersionLatestMD5" ]; then
-                ViaVersionLocalMD5=$(md5sum plugins/ViaVersion.jar | cut -d' ' -f1)
-                if [ -e /minecraft/plugins/ViaVersion.jar ] && [ "$ViaVersionLocalMD5" = "$ViaVersionLatestMD5" ]; then
-                    echo "     ViaVersion is up to date: $ViaVersionLatestVersion"
+        # Update ViaVersion if new version is available or if ViaVersionAlwaysDownload is set
+        if [ -n "$ViaVersionAlwaysDownload" ]; then
+            echo "     ViaVersionAlwaysDownload is set - downloading latest version without checking ..."
+            if [ -n "$ViaVersionLatestVersion" ]; then
+                echo "     Downloading latest version: $ViaVersionLatestVersion"
+                curl ${QuietCurl:+"--no-progress-meter"} \
+                     "${CurlArgs[@]}" \
+                     -k \
+                     -o /minecraft/plugins/ViaVersion.jar \
+                     "https://ci.viaversion.com/job/ViaVersion/lastBuild/artifact/build/libs/$ViaVersionLatestVersion"
+            else
+                echo "ERROR:  Unable to determine latest ViaVersion version!"
+            fi
+        else
+            if [ -n "$ViaVersionLatestVersion" ]; then
+                ViaVersionLatestMD5=$(curl --no-progress-meter \
+                    "${CurlArgs[@]}" \
+                    -k \
+                    "https://ci.viaversion.com/job/ViaVersion/lastBuild/artifact/build/libs/$ViaVersionLatestVersion/*fingerprint*/" \
+                    | grep breadcrumbs | cut -d'_' -f24- | cut -d'<' -f2 | cut -d'>' -f2
+                )
+                if [ -n "$ViaVersionLatestMD5" ]; then
+                    ViaVersionLocalMD5=$(md5sum plugins/ViaVersion.jar | cut -d' ' -f1)
+                    if [ -e /minecraft/plugins/ViaVersion.jar ] && [ "$ViaVersionLocalMD5" = "$ViaVersionLatestMD5" ]; then
+                        echo "     ViaVersion is up to date: $ViaVersionLatestVersion"
+                    else
+                        echo "     Downloading new version: $ViaVersionLatestVersion"
+                        curl ${QuietCurl:+"--no-progress-meter"} \
+                             "${CurlArgs[@]}" \
+                             -k \
+                             -o /minecraft/plugins/ViaVersion.jar \
+                             "https://ci.viaversion.com/job/ViaVersion/lastBuild/artifact/build/libs/$ViaVersionLatestVersion"
+                    fi
                 else
-                    echo "     Downloading new version: $ViaVersionLatestVersion"
-                    curl ${QuietCurl:+"--no-progress-meter"} \
-                         "${CurlArgs[@]}" \
-                         -k \
-                         -o /minecraft/plugins/ViaVersion.jar \
-                         "https://ci.viaversion.com/job/ViaVersion/lastBuild/artifact/build/libs/$ViaVersionLatestVersion"
+                    echo "ERROR:  Unable to retrieve MD5 checksum for latest ViaVersion version!"
                 fi
             else
-                echo "ERROR:  Unable to check for updates to ViaVersion!"
+                echo "ERROR:  Unable to determine latest ViaVersion version!"
             fi
         fi
     else

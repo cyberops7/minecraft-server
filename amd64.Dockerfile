@@ -67,6 +67,9 @@ ENV QuietCurl=""
 # Optional switch to disable ViaVersion
 ENV NoViaVersion=""
 
+# Optional switch to skip ViaVersion version check
+ENV ViaVersionAlwaysDownload=""
+
 # IPV4 Ports
 EXPOSE 25565/tcp
 EXPOSE 19132/tcp
