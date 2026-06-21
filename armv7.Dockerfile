@@ -32,7 +32,7 @@ RUN apt-get update && \
       libcrypt1 \
       net-tools \
       nano \
-      openjdk-21-jre-headless \
+      openjdk-25-jre-headless \
       openssl \
       pigz \
       tzdata \
@@ -50,7 +50,7 @@ ENV BedrockPort=19132
 ENV MaxMemory=""
 
 # Optional Paper Minecraft Version override
-ENV Version="1.21.3"
+ENV Version="26.1.2"
 
 # Optional Timezone
 ENV TZ="America/Denver"
