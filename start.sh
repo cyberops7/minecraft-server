@@ -15,7 +15,7 @@ if [ "$(id -u)" = '0' ]; then
     echo "Script is running as '$(whoami)', switching to 'minecraft' user ..."
 
     echo "     Changing ownership of all files in /minecraft to 'minecraft:minecraft' ..."
-    chown -R minecraft:minecraft /minecraft >/dev/null
+    chown -R minecraft:minecraft /minecraft 2>&1 1>/dev/null | grep -v 'Read-only file system' >&2 || true
 
     echo "     Restarting script as 'minecraft' user."
     exec su minecraft -c "$0" "$@"
@@ -89,7 +89,7 @@ done
 # Check ownership of server files
 if [ -z "$NoPermCheck" ]; then
     echo "Checking ownership of all server files/folders in /minecraft for user:group - '$(whoami):$(whoami)' ..."
-    chown -R minecraft:minecraft /minecraft >/dev/null
+    chown -R minecraft:minecraft /minecraft 2>&1 1>/dev/null | grep -v 'Read-only file system' >&2 || true
     echo "     Ownership check complete.  Any errors above could indicate an issue."
 else
     echo "Skipping ownership check due to NoPermCheck flag."
