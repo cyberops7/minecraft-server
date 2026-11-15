@@ -58,6 +58,9 @@ ENV NoBackup=""
 # Number of rolling backups to keep
 ENV BackupCount=10
 
+# Optional switch to skip the backup (and backup rotation) that otherwise runs on every start
+ENV NoStartupBackup=""
+
 # Optional switch to skip permissions check
 ENV NoPermCheck=""
 

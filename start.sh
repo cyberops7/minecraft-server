@@ -95,8 +95,11 @@ else
     echo "Skipping ownership check due to NoPermCheck flag."
 fi
 
-# Back up server
-if [ -d "world" ]; then
+# Back up server (NoStartupBackup skips both the backup and the rotation below, so existing backups are left untouched)
+if [ -n "$NoStartupBackup" ]; then
+    echo "Skipping startup backup and backup rotation due to NoStartupBackup flag.  Existing backups in /minecraft/backups are left in place."
+fi
+if [ -z "$NoStartupBackup" ] && [ -d "world" ]; then
     echo "Running backup ..."
     # Build tar args
     tarExcludes=(
@@ -130,7 +133,7 @@ if [ -d "world" ]; then
 fi
 
 # Rotate backups
-if [ -d /minecraft/backups ] && [ -n "$BackupCount" ]; then
+if [ -z "$NoStartupBackup" ] && [ -d /minecraft/backups ] && [ -n "$BackupCount" ]; then
     (
         pushd /minecraft/backups || exit
         find . -type f -printf "%T@ %p\n" | sort -n | head -n -"$BackupCount" | cut -d' ' -f2- | xargs -d '\n' rm -f --

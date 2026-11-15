@@ -45,6 +45,8 @@ Using a different timezone:
 <pre>docker run -it -v yourvolumename:/minecraft -p 25565:25565 -p 19132:19132/udp -p 19132:19132 -e TZ="America/Denver" --restart unless-stopped 05jchambers/legendary-minecraft-geyser-floodgate:latest</pre>
 Skipping backups on certain folders (comma separated):
 <pre>docker run -it -v yourvolumename:/minecraft -p 25565:25565 -p 19132:19132/udp -p 19132:19132 -e NoBackup="plugins/ftp,plugins/test2" --restart unless-stopped 05jchambers/legendary-minecraft-geyser-floodgate:latest</pre>
+Skipping the backup that runs on every start:
+<pre>docker run -it -v yourvolumename:/minecraft -p 25565:25565 -p 19132:19132/udp -p 19132:19132 -e NoStartupBackup="Y" --restart unless-stopped 05jchambers/legendary-minecraft-geyser-floodgate:latest</pre>
 Skipping permissions check:
 <pre>docker run -it -v yourvolumename:/minecraft -p 25565:25565 -p 19132:19132/udp -p 19132:19132 -e NoPermCheck="Y" --restart unless-stopped 05jchambers/legendary-minecraft-geyser-floodgate:latest</pre>
 
@@ -100,6 +102,9 @@ A <a href="https://en.wikipedia.org/wiki/List_of_tz_database_time_zones">list of
 
 <h2>BackupCount Environment Variable</h2>
 By default the server keeps 10 rolling backups that occur each time the container restarts.  You can override this using the BackupCount environment variable:<pre>docker run -it -v yourvolumename:/minecraft -p 25565:25565 -p 19132:19132/udp -p 19132:19132 -e BackupCount=20 --restart unless-stopped 05jchambers/legendary-minecraft-geyser-floodgate:latest</pre>
+
+<h2>NoStartupBackup Environment Variable</h2>
+By default the server backs itself up to the "backups" folder every time the container starts.  On a large world this can add several minutes to every start, and it is redundant if the volume is already backed up some other way.  Set NoStartupBackup to any value to skip the startup backup entirely.  Backup rotation is skipped as well, so any existing backups are left in place until they are removed by hand:<pre>docker run -it -v yourvolumename:/minecraft -p 25565:25565 -p 19132:19132/udp -p 19132:19132 -e NoStartupBackup="Y" --restart unless-stopped 05jchambers/legendary-minecraft-geyser-floodgate:latest</pre>
 
 <h2>QuietCurl Environment Variable</h2>
 You can use the QuietCurl environment variable to suppress curl's download output.  This will keep your logs tidier but may make it harder to diagnose if something is going wrong.  If things are working well it's safe to enable this option and turn it back off so you can see the output if you need to:<pre>docker run -it -v yourvolumename:/minecraft -p 25565:25565 -p 19132:19132/udp -p 19132:19132 -e QuietCurl=Y --restart unless-stopped 05jchambers/legendary-minecraft-geyser-floodgate:latest</pre>
