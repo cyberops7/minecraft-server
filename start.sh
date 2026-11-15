@@ -95,8 +95,11 @@ else
     echo "Skipping ownership check due to NoPermCheck flag."
 fi
 
-# Back up server
-if [ -d "world" ]; then
+# Back up server (NoStartupBackup skips both the backup and the rotation below, so existing backups are left untouched)
+if [ -n "$NoStartupBackup" ]; then
+    echo "Skipping startup backup and backup rotation due to NoStartupBackup flag.  Existing backups in /minecraft/backups are left in place."
+fi
+if [ -z "$NoStartupBackup" ] && [ -d "world" ]; then
     echo "Running backup ..."
     # Build tar args
     tarExcludes=(
@@ -130,7 +133,7 @@ if [ -d "world" ]; then
 fi
 
 # Rotate backups
-if [ -d /minecraft/backups ] && [ -n "$BackupCount" ]; then
+if [ -z "$NoStartupBackup" ] && [ -d /minecraft/backups ] && [ -n "$BackupCount" ]; then
     (
         pushd /minecraft/backups || exit
         find . -type f -printf "%T@ %p\n" | sort -n | head -n -"$BackupCount" | cut -d' ' -f2- | xargs -d '\n' rm -f --
@@ -223,9 +226,8 @@ else
         echo "     Checking the latest version of ViaVersion ..."
             ViaVersionLatestVersion=$(curl --no-progress-meter \
                 "${CurlArgs[@]}" \
-                -k \
                 https://ci.viaversion.com/job/ViaVersion/lastBuild/artifact/build/libs/ \
-                | grep -P '(?<=href=")ViaVersion[^"]+' -o --max-count=1 | head -n1
+                | grep -P '(?<=href=")ViaVersion[^"]+' -o | head -n1
             )
         # Update ViaVersion if new version is available or if ViaVersionAlwaysDownload is set
         if [ -n "$ViaVersionAlwaysDownload" ]; then
@@ -234,7 +236,6 @@ else
                 echo "     Downloading latest version: $ViaVersionLatestVersion"
                 curl ${QuietCurl:+"--no-progress-meter"} \
                      "${CurlArgs[@]}" \
-                     -k \
                      -o /minecraft/plugins/ViaVersion.jar \
                      "https://ci.viaversion.com/job/ViaVersion/lastBuild/artifact/build/libs/$ViaVersionLatestVersion"
             else
@@ -244,19 +245,20 @@ else
             if [ -n "$ViaVersionLatestVersion" ]; then
                 ViaVersionLatestMD5=$(curl --no-progress-meter \
                     "${CurlArgs[@]}" \
-                    -k \
                     "https://ci.viaversion.com/job/ViaVersion/lastBuild/artifact/build/libs/$ViaVersionLatestVersion/*fingerprint*/" \
-                    | grep breadcrumbs | cut -d'_' -f24- | cut -d'<' -f2 | cut -d'>' -f2
+                    | grep -oP 'tooltip="\K[0-9a-f]{32}' | head -n1
                 )
                 if [ -n "$ViaVersionLatestMD5" ]; then
-                    ViaVersionLocalMD5=$(md5sum plugins/ViaVersion.jar | cut -d' ' -f1)
-                    if [ -e /minecraft/plugins/ViaVersion.jar ] && [ "$ViaVersionLocalMD5" = "$ViaVersionLatestMD5" ]; then
+                    ViaVersionLocalMD5=""
+                    if [ -e /minecraft/plugins/ViaVersion.jar ]; then
+                        ViaVersionLocalMD5=$(md5sum /minecraft/plugins/ViaVersion.jar | cut -d' ' -f1)
+                    fi
+                    if [ "$ViaVersionLocalMD5" = "$ViaVersionLatestMD5" ]; then
                         echo "     ViaVersion is up to date: $ViaVersionLatestVersion"
                     else
                         echo "     Downloading new version: $ViaVersionLatestVersion"
                         curl ${QuietCurl:+"--no-progress-meter"} \
                              "${CurlArgs[@]}" \
-                             -k \
                              -o /minecraft/plugins/ViaVersion.jar \
                              "https://ci.viaversion.com/job/ViaVersion/lastBuild/artifact/build/libs/$ViaVersionLatestVersion"
                     fi
