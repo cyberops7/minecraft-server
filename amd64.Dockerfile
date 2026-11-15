@@ -13,6 +13,14 @@ RUN apt-get update && \
 # Use Ubuntu rolling version
 FROM --platform=linux/amd64 ubuntu:rolling
 
+# Create the minecraft user/group (uid/gid 999) before installing packages.  Packages that add system
+# groups (e.g. systemd's lpadmin on Ubuntu 26.10) take the highest free GID, which would otherwise be 999.
+RUN groupadd -g 999 minecraft && \
+    useradd -m -u 999 -g 999 -s /bin/bash minecraft && \
+    mkdir /minecraft && \
+    chown minecraft:minecraft /minecraft && \
+    chmod 777 /minecraft
+
 # Fetch dependencies
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -yqq \
@@ -85,12 +93,7 @@ COPY *.yml /scripts/
 COPY server.properties /scripts/
 RUN chmod -R +x /scripts/*.sh
 
-# Create the minecraft user/group and set the container to run as the minecraft user
-RUN groupadd -g 999 minecraft && \
-    useradd -m -u 999 -g 999 -s /bin/bash minecraft && \
-    mkdir /minecraft && \
-    chown minecraft:minecraft /minecraft && \
-    chmod 777 /minecraft
+# Run the container as the minecraft user
 USER minecraft
 WORKDIR /minecraft
 
