@@ -226,9 +226,8 @@ else
         echo "     Checking the latest version of ViaVersion ..."
             ViaVersionLatestVersion=$(curl --no-progress-meter \
                 "${CurlArgs[@]}" \
-                -k \
                 https://ci.viaversion.com/job/ViaVersion/lastBuild/artifact/build/libs/ \
-                | grep -P '(?<=href=")ViaVersion[^"]+' -o --max-count=1 | head -n1
+                | grep -P '(?<=href=")ViaVersion[^"]+' -o | head -n1
             )
         # Update ViaVersion if new version is available or if ViaVersionAlwaysDownload is set
         if [ -n "$ViaVersionAlwaysDownload" ]; then
@@ -237,7 +236,6 @@ else
                 echo "     Downloading latest version: $ViaVersionLatestVersion"
                 curl ${QuietCurl:+"--no-progress-meter"} \
                      "${CurlArgs[@]}" \
-                     -k \
                      -o /minecraft/plugins/ViaVersion.jar \
                      "https://ci.viaversion.com/job/ViaVersion/lastBuild/artifact/build/libs/$ViaVersionLatestVersion"
             else
@@ -247,19 +245,20 @@ else
             if [ -n "$ViaVersionLatestVersion" ]; then
                 ViaVersionLatestMD5=$(curl --no-progress-meter \
                     "${CurlArgs[@]}" \
-                    -k \
                     "https://ci.viaversion.com/job/ViaVersion/lastBuild/artifact/build/libs/$ViaVersionLatestVersion/*fingerprint*/" \
-                    | grep breadcrumbs | cut -d'_' -f24- | cut -d'<' -f2 | cut -d'>' -f2
+                    | grep -oP 'tooltip="\K[0-9a-f]{32}' | head -n1
                 )
                 if [ -n "$ViaVersionLatestMD5" ]; then
-                    ViaVersionLocalMD5=$(md5sum plugins/ViaVersion.jar | cut -d' ' -f1)
-                    if [ -e /minecraft/plugins/ViaVersion.jar ] && [ "$ViaVersionLocalMD5" = "$ViaVersionLatestMD5" ]; then
+                    ViaVersionLocalMD5=""
+                    if [ -e /minecraft/plugins/ViaVersion.jar ]; then
+                        ViaVersionLocalMD5=$(md5sum /minecraft/plugins/ViaVersion.jar | cut -d' ' -f1)
+                    fi
+                    if [ "$ViaVersionLocalMD5" = "$ViaVersionLatestMD5" ]; then
                         echo "     ViaVersion is up to date: $ViaVersionLatestVersion"
                     else
                         echo "     Downloading new version: $ViaVersionLatestVersion"
                         curl ${QuietCurl:+"--no-progress-meter"} \
                              "${CurlArgs[@]}" \
-                             -k \
                              -o /minecraft/plugins/ViaVersion.jar \
                              "https://ci.viaversion.com/job/ViaVersion/lastBuild/artifact/build/libs/$ViaVersionLatestVersion"
                     fi
